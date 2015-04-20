@@ -1,0 +1,5 @@
+timeout 1
+
+title	JamesM's Tutorial
+	root (fd0)
+	kernel /kernel

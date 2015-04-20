@@ -1,0 +1,7 @@
+#!/bin/bash
+# mounts the correct loopback device, runs bochs, then unmounts.
+LOSETUP=/sbin/losetup
+${LOSETUP} /dev/loop0 `make echo-build-root`floppy.img
+bochs -f bochsrc.txt
+chown tomek:tomek bochsout.txt
+${LOSETUP} -d /dev/loop0 
