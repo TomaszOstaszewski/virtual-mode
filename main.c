@@ -7,17 +7,7 @@
 
 struct multiboot;
 
-int enter_sandman(struct multiboot *mboot_ptr)
+int kernel_main(void)
 {
-    // Initialise all the ISRs and segmentation
-    init_descriptor_tables();
-    // Initialise the screen (by clearing it)
-    monitor_clear();
-    // Write out a sample string
-    monitor_write("Hello, world!\n");
-	init_timer(20);
-
-    asm volatile("sti");
-    
     return 0;
 }
