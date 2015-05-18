@@ -10,11 +10,11 @@
 # You don't need to understand all these details as it is just magic values that
 # is documented in the multiboot standard. The bootloader will search for this
 # magic sequence and recognize us as a multiboot kernel.
-.section .multiboot
-.align 4
-.long MAGIC
-.long FLAGS
-.long CHECKSUM
+        .section .multiboot
+        .align 4
+        .long MAGIC
+        .long FLAGS
+        .long CHECKSUM
 
 # Currently the stack pointer register (esp) points at anything and using it may
 # cause massive harm. Instead, we'll provide our own stack. We will allocate
