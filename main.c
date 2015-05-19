@@ -9,5 +9,6 @@ struct multiboot;
 
 int kernel_main(void)
 {
+  monitor_write("Hello, world!\n");
     return 0;
 }

@@ -27,7 +27,7 @@ MD5CHK  :=0
 AS      :=gcc
 CC      :=gcc
 CXX     :=g++
-CFLAGS  :=-m32 -Wall -Werror -fno-omit-frame-pointer -ffreestanding -nostdlib -fno-stack-protector
+CFLAGS  :=-O0 -ggdb -m32 -Wall -Werror -fno-omit-frame-pointer -ffreestanding -nostdlib -fno-stack-protector
 AFLAGS  :=
 
 ifeq ($(V),1)
@@ -40,15 +40,21 @@ endif
 
 boot_DIR        :=./arch/i386/
 boot_FILES      :=\
- boot.s \
+ boot.s   \
+ common.c \
 
 kernel_DIR      :=./
-kernel_FILES    := \
+kernel_FILES    :=\
  main.c \
+
+vga_DIR         :=./drivers/vga/
+vga_FILES       :=\
+ monitor.c
 
 COMPONENTS      :=\
  boot   \
  kernel \
+ vga    \
 
 DEPGEN_FLAGS=-MP -MMD \
  -MT '$(@D)/$(*).o $(@D)/$(*).d $(@D)/$(*).i $(@D)/$(*).S $(@D)/$(*).def dirs-$$(1) doxy-$$(1) $$(BUILD_ROOT)cscope.files bundle log'
@@ -57,6 +63,12 @@ include mk/macros.mk
 include mk/autodir.mk
 
 $(foreach comp,$(COMPONENTS),$(eval $(call SETUP_VARS,$(comp))))
+
+$(kernel_OBJ_DIR)% : CPPFLAGS+=\
+ -Idrivers/vga/ \
+ -Iarch/i386/
+$(vga_OBJ_DIR)% : CPPFLAGS+= \
+ -Iarch/i386/
 
 -include $(ALL_DEPENDS)
 
@@ -72,6 +84,10 @@ echo-app-name:
 echo:
 	@echo COMPONENTS $(COMPONENTS)
 	@echo ALL_OBJECTS $(ALL_OBJECTS)
+	@echo vga_OBJ $(vga_OBJ)
+	@echo vga_SRC $(vga_SRC)
+	@echo boot_OBJ $(boot_OBJ)
+	@echo kernel_OBJ $(kernel_OBJ)
 
 .PHONY: all iso
 iso all: $(BUILD_ROOT)$(ISO_IMG_NAME)
