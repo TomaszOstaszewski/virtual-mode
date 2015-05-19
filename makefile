@@ -1,23 +1,22 @@
-# An ultimate makefile... 
-
 .SUFFIXES:
 .DEFAULT_GOAL:=all
 
-ECHO_DEP:= echo "	DEP	"
-ECHO_CC := echo "	CC	"
-ECHO_AS := echo "	AS	"
-ECHO_CXX:= echo "	CXX	"
-ECHO_LD := echo "	LD	"
-ECHO_MD := echo "	MD	"
-ECHO_ISO:= echo "	ISO	"
-ECHO_STRIP:= echo "	STRIP	"
-ECHO_CP := echo "	CP	"
-ECHO_RM := echo "	RM	"
+ECHO_DEP        := echo "       DEP     "
+ECHO_CC         := echo "       CC      "
+ECHO_AS         := echo "       AS      "
+ECHO_CXX        := echo "       CXX     "
+ECHO_LD         := echo "       LD      "
+ECHO_MD         := echo "       MD      "
+ECHO_ISO        := echo "       ISO     "
+ECHO_STRIP      := echo "       STRIP   "
+ECHO_CP         := echo "       CP      "
+ECHO_RM         := echo "       RM      "
 
 .SECONDEXPANSION:
 
 CROSS_COMPILE   :=i686-unknown-elf-
-CC              :=$(CROSS_COMPILE)gcc
+PATH    	:=/home/tomek/x-tools/${CROSS_COMPILE:%-=%}/bin/:${PATH}
+CC              :=/home/tomek/x-tools/${CROSS_COMPILE:%-=%}/bin/${CROSS_COMPILE}gcc
 BUILD_ROOT      :=$(firstword $(subst -, ,$(shell $(CC) -dumpmachine)))/
 OS_IMG_NAME     :=atos.kernel.elf
 THIN_IMG_NAME   :=atos.kernel
@@ -54,8 +53,8 @@ COMPONENTS      :=\
 DEPGEN_FLAGS=-MP -MMD \
  -MT '$(@D)/$(*).o $(@D)/$(*).d $(@D)/$(*).i $(@D)/$(*).S $(@D)/$(*).def dirs-$$(1) doxy-$$(1) $$(BUILD_ROOT)cscope.files bundle log'
 
-include macros.mk
-include autodir.mk
+include mk/macros.mk
+include mk/autodir.mk
 
 $(foreach comp,$(COMPONENTS),$(eval $(call SETUP_VARS,$(comp))))
 
@@ -69,6 +68,7 @@ echo-build-root:
 echo-app-name:
 	@echo $(OS_IMG_NAME)
 
+.PHONY: echo
 echo:
 	@echo COMPONENTS $(COMPONENTS)
 	@echo ALL_OBJECTS $(ALL_OBJECTS)
@@ -85,7 +85,7 @@ $(BUILD_ROOT)$(ISO_IMG_NAME): \
 
 $(BUILD_ROOT)$(OS_IMG_NAME): $(ALL_OBJECTS) link.ld
 	@$(ECHO_LD) $@
-	$(NOECHO)$(CXX) $(CFLAGS) -Wl,-Map=$(@).map -T$(filter link.ld,$(^)) -o $@ $(filter %.o,$(^)) -lgcc
+	$(NOECHO)$(CC) $(CFLAGS) -Wl,-Map=$(@).map -T$(filter link.ld,$(^)) -o $@ $(filter %.o,$(^)) -lgcc
 
 $(BUILD_ROOT)isodir/boot/grub/grub.cfg: ./grub.conf | $$(@D)/.
 	@$(ECHO_CP) $(@)
