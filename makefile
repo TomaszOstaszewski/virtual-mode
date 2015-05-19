@@ -16,7 +16,50 @@ ECHO_RM := echo "	RM	"
 
 .SECONDEXPANSION:
 
-BUILD_ROOT:=$(firstword $(subst -, ,$(shell $(CC) -dumpmachine)))/
+CROSS_COMPILE   :=i686-unknown-elf-
+CC              :=$(CROSS_COMPILE)gcc
+BUILD_ROOT      :=$(firstword $(subst -, ,$(shell $(CC) -dumpmachine)))/
+OS_IMG_NAME     :=atos.kernel.elf
+THIN_IMG_NAME   :=atos.kernel
+ISO_IMG_NAME    :=atos.iso
+
+DEP     ?=2
+MD5CHK  :=0
+AS      :=gcc
+CC      :=gcc
+CXX     :=g++
+CFLAGS  :=-m32 -Wall -Werror -fno-omit-frame-pointer -ffreestanding -nostdlib -fno-stack-protector
+AFLAGS  :=
+
+ifeq ($(V),1)
+NOECHO  :=
+CP      :=cp -v
+else
+NOECHO  :=@
+CP      :=cp
+endif
+
+boot_DIR        :=./arch/i386/
+boot_FILES      :=\
+ boot.s \
+
+kernel_DIR      :=./
+kernel_FILES    := \
+ main.c \
+
+COMPONENTS      :=\
+ boot   \
+ kernel \
+
+DEPGEN_FLAGS=-MP -MMD \
+ -MT '$(@D)/$(*).o $(@D)/$(*).d $(@D)/$(*).i $(@D)/$(*).S $(@D)/$(*).def dirs-$$(1) doxy-$$(1) $$(BUILD_ROOT)cscope.files bundle log'
+
+include macros.mk
+include autodir.mk
+
+$(foreach comp,$(COMPONENTS),$(eval $(call SETUP_VARS,$(comp))))
+
+-include $(ALL_DEPENDS)
 
 .PHONY: echo-build-root
 echo-build-root:
@@ -26,59 +69,12 @@ echo-build-root:
 echo-app-name:
 	@echo $(OS_IMG_NAME)
 
-OS_IMG_NAME:=atos.kernel.elf
-THIN_IMG_NAME:=atos.kernel
-ISO_IMG_NAME:=atos.iso
+echo:
+	@echo COMPONENTS $(COMPONENTS)
+	@echo ALL_OBJECTS $(ALL_OBJECTS)
 
-
-DEP	?=2
-MD5CHK	:=0
-AS	:=gcc
-CC	:=gcc
-CXX	:=g++
-CFLAGS	:=-m32 -Wall -Werror -fno-omit-frame-pointer -ffreestanding -nostdlib -fno-stack-protector
-AFLAGS  :=
-
-ifeq ($(V),1)
-NOECHO=
-CP:=cp -v
-else
-NOECHO=@
-CP:=cp
-endif
-
-kernel_DIR:=./
-kernel_FILES:= \
- boot.s \
- main.c
-
-COMPONENTS:=\
- kernel
-
-EXTRA_DEP='$$(@D)/$$*.o $$(@D)/$$*.d $$(@D)/$$*.i $$(@D)/$$*.S $$(@D)/$$*.def dirs-$(1) doxy-$(1) $(BUILD_ROOT)cscope.files bundle log'
-
-INCLUDE_PATH=
-DEPGEN_FLAGS=-MP -MMD -MT $(EXTRA_DEP)
-
-include macros.mk
-include autodir.mk
-
-$(foreach comp,$(COMPONENTS),$(eval $(call SETUP_VARS,$(comp))))
-
--include $(ALL_DEPENDS)
-
-$(foreach comp,$(COMPONENTS),$(eval $(call MAKE_OBJECT,$(comp))))
-
-$(BUILD_ROOT)$(OS_IMG_NAME): $(ALL_OBJECTS) link.ld
-	@$(ECHO_LD) $@
-	$(NOECHO)$(CXX) $(CFLAGS) -Wl,-Map=$(@).map -T$(filter link.ld,$(^)) -o $@ $(filter %.o,$(^)) -lgcc
-
-
-.PHONY: all
-all: $(BUILD_ROOT)$(OS_IMG_NAME) ;
-
-.PHONY: iso
-iso: $(BUILD_ROOT)$(ISO_IMG_NAME)
+.PHONY: all iso
+iso all: $(BUILD_ROOT)$(ISO_IMG_NAME)
 
 $(BUILD_ROOT)$(ISO_IMG_NAME): \
  $(BUILD_ROOT)isodir/boot/$(THIN_IMG_NAME) \
@@ -86,6 +82,10 @@ $(BUILD_ROOT)$(ISO_IMG_NAME): \
  | $$(@D)/.
 	@$(ECHO_ISO) $(@)
 	$(NOECHO)grub-mkrescue -o $(@) $(BUILD_ROOT)isodir
+
+$(BUILD_ROOT)$(OS_IMG_NAME): $(ALL_OBJECTS) link.ld
+	@$(ECHO_LD) $@
+	$(NOECHO)$(CXX) $(CFLAGS) -Wl,-Map=$(@).map -T$(filter link.ld,$(^)) -o $@ $(filter %.o,$(^)) -lgcc
 
 $(BUILD_ROOT)isodir/boot/grub/grub.cfg: ./grub.conf | $$(@D)/.
 	@$(ECHO_CP) $(@)
@@ -122,3 +122,7 @@ depclean:
 .PHONY: realclean
 realclean: 
 	-$(NOECHO)$(RM) -r $(BUILD_ROOT)
+
+.PHONY: test
+test: $(BUILD_ROOT)$(ISO_IMG_NAME)
+	qemu-system-i386 -cdrom $(<)
