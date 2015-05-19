@@ -27,8 +27,11 @@ MD5CHK  :=0
 AS      :=gcc
 CC      :=gcc
 CXX     :=g++
-CFLAGS  :=-O0 -ggdb -m32 -Wall -Werror -fno-omit-frame-pointer -ffreestanding -nostdlib -fno-stack-protector
+CFLAGS  :=-O0 -ggdb -m32 -Wall -Werror -nostdlib \
+ -fno-omit-frame-pointer -ffreestanding -fno-stack-protector \
+ -ffunction-sections -fdata-sections
 AFLAGS  :=
+LDFLAGS :=-Wl,-gc-sections
 
 ifeq ($(V),1)
 NOECHO  :=
@@ -41,7 +44,6 @@ endif
 boot_DIR        :=./arch/i386/
 boot_FILES      :=\
  boot.s   \
- common.c \
 
 kernel_DIR      :=./
 kernel_FILES    :=\
@@ -67,6 +69,7 @@ $(foreach comp,$(COMPONENTS),$(eval $(call SETUP_VARS,$(comp))))
 $(kernel_OBJ_DIR)% : CPPFLAGS+=\
  -Idrivers/vga/ \
  -Iarch/i386/
+
 $(vga_OBJ_DIR)% : CPPFLAGS+= \
  -Iarch/i386/
 
@@ -101,7 +104,7 @@ $(BUILD_ROOT)$(ISO_IMG_NAME): \
 
 $(BUILD_ROOT)$(OS_IMG_NAME): $(ALL_OBJECTS) link.ld
 	@$(ECHO_LD) $@
-	$(NOECHO)$(CC) $(CFLAGS) -Wl,-Map=$(@).map -T$(filter link.ld,$(^)) -o $@ $(filter %.o,$(^)) -lgcc
+	$(NOECHO)$(CC) $(CFLAGS) $(LDFLAGS) -Wl,-Map=$(@).map -T$(filter link.ld,$(^)) -o $(@) $(filter %.o,$(^)) -lgcc
 
 $(BUILD_ROOT)isodir/boot/grub/grub.cfg: ./grub.conf | $$(@D)/.
 	@$(ECHO_CP) $(@)

@@ -3,7 +3,7 @@
 
 #include "common.h"
 
-uint32_t g_tbl[1] = {0xcafebabe };
+uint32_t g_tbl[1] = { 0xcafebabe };
 
 // Write a byte out to the specified port.
 void outb(u16int port, u8int value)
