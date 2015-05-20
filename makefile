@@ -1,5 +1,6 @@
 .SUFFIXES:
 .DEFAULT_GOAL:=all
+.SECONDEXPANSION:
 
 ECHO_DEP        := echo "       DEP     "
 ECHO_CC         := echo "       CC      "
@@ -12,7 +13,14 @@ ECHO_STRIP      := echo "       STRIP   "
 ECHO_CP         := echo "       CP      "
 ECHO_RM         := echo "       RM      "
 
-.SECONDEXPANSION:
+ifeq ($(V),1)
+NOECHO  :=
+CP      :=cp -v
+else
+NOECHO  :=@
+CP      :=cp
+endif
+
 
 CROSS_COMPILE   :=i686-unknown-elf-
 PATH    	:=/home/tomek/x-tools/${CROSS_COMPILE:%-=%}/bin/:${PATH}
@@ -32,48 +40,21 @@ CFLAGS  :=-O0 -ggdb -m32 -Wall -Werror -nostdlib \
  -ffunction-sections -fdata-sections
 AFLAGS  :=
 LDFLAGS :=-Wl,-gc-sections
+DEPGEN_FLAGS =-MP -MMD \
+ -MT '$(@D)/$(*).o $(@D)/$(*).d $(@D)/$(*).i $(@D)/$(*).S $(@D)/$(*).def dirs-$$(1) doxy-$$(1) $$(BUILD_ROOT)cscope.files bundle log'
+LDSCRIPT:=./arch/i386/link.ld
 
-ifeq ($(V),1)
-NOECHO  :=
-CP      :=cp -v
-else
-NOECHO  :=@
-CP      :=cp
-endif
-
-boot_DIR        :=./arch/i386/
-boot_FILES      :=\
- boot.s   \
- crti.s   \
- crtn.s   \
-
-kernel_DIR      :=./
-kernel_FILES    :=\
- main.c \
-
-vga_DIR         :=./drivers/vga/
-vga_FILES       :=\
- monitor.c
+include mk/macros.mk
+include mk/autodir.mk
 
 COMPONENTS      :=\
  boot   \
  kernel \
  vga    \
-
-DEPGEN_FLAGS=-MP -MMD \
- -MT '$(@D)/$(*).o $(@D)/$(*).d $(@D)/$(*).i $(@D)/$(*).S $(@D)/$(*).def dirs-$$(1) doxy-$$(1) $$(BUILD_ROOT)cscope.files bundle log'
-
-include mk/macros.mk
-include mk/autodir.mk
+ klibc_stdio \
+ klibc_string \
 
 $(foreach comp,$(COMPONENTS),$(eval $(call SETUP_VARS,$(comp))))
-
-$(kernel_OBJ_DIR)% : CPPFLAGS+=\
- -Idrivers/vga/ \
- -Iarch/i386/
-
-$(vga_OBJ_DIR)% : CPPFLAGS+= \
- -Iarch/i386/
 
 -include $(ALL_DEPENDS)
 
@@ -104,9 +85,9 @@ $(BUILD_ROOT)$(ISO_IMG_NAME): \
 	@$(ECHO_ISO) $(@)
 	$(NOECHO)grub-mkrescue -o $(@) $(BUILD_ROOT)isodir
 
-$(BUILD_ROOT)$(OS_IMG_NAME): $(ALL_OBJECTS) link.ld
+$(BUILD_ROOT)$(OS_IMG_NAME): $(ALL_OBJECTS) $(LDSCRIPT)
 	@$(ECHO_LD) $@
-	$(NOECHO)$(CC) $(CFLAGS) $(LDFLAGS) -Wl,-Map=$(@).map -T$(filter link.ld,$(^)) -o $(@) $(filter %.o,$(^)) -lgcc
+	$(NOECHO)$(CC) $(CFLAGS) $(LDFLAGS) -Wl,-Map=$(@).map -T$(filter %.ld,$(^)) -o $(@) $(filter %.o,$(^)) -lgcc
 
 $(BUILD_ROOT)isodir/boot/grub/grub.cfg: ./grub.conf | $$(@D)/.
 	@$(ECHO_CP) $(@)

@@ -9,6 +9,15 @@ $(1)_OBJ+=$$(addprefix $$($(1)_OBJ_DIR),$$(patsubst %.s,%.o,$$(filter %.s,$$($(1
 $(1)_DEP:=$$(patsubst %.o,%.d,$$($(1)_OBJ))
 ALL_OBJECTS+=$$($(1)_OBJ)
 ALL_DEPENDS+=$$($(1)_DEP)
+$$($(1)_OBJ_DIR)% : CPPFLAGS+=$$($(1)_INCLUDES)
+
+.PHONY: echo-$(1)
+echo-$(1):
+	@echo $(1)_SRC $$($(1)_SRC)
+	@echo $(1)_OBJ $$($(1)_OBJ)
+	@echo $(1)_DEP $$($(1)_DEP)
+
+include mk/$(1).mk
 
 .PHONY : dirs-$(1)
 dirs-$(1):

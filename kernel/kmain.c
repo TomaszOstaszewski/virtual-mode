@@ -4,6 +4,7 @@
 // main.c -- Defines the C-code kernel entry point, calls initialisation routines.
 //           Made for JamesM's tutorials <www.jamesmolloy.co.uk>
 
+#include <stdio.h>
 #include "monitor.h"
 #include "intrisics.h"
 
@@ -38,6 +39,7 @@ void parse_cr0(uint32_t cr0) {
 
 int kernel_main(void) {
     uint64_t mmap = 0xcafebabe;
+    printf("Hello, world at %x!\n", mmap);
     monitor_write_hex((mmap >> 32));
     monitor_write_hex((mmap & 0xffffffff));
     monitor_write_hex(read_cr3());

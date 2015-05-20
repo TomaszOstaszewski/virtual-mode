@@ -1,6 +1,4 @@
-/macros.mk~
-/md5.mk~
-/nostackstubs.S~
 /x86_64/
 /i686/
 /bochsout.txt
+*~
