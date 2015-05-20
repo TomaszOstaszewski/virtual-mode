@@ -1,26 +1,29 @@
-/*; Gdt.s -- contains global descriptor table and interrupt descriptor table */
-/*;          setup code.                                                     */
-/*;          Based on code from Bran's kernel development tutorials.         */
-/*         Rewritten for JamesM's kernel development tutorials.              */
+global gdt_flush
+gdtr DW 0
+     DD 0
+ 
+setGdt:
+   MOV   EAX, [esp + 4]
+   MOV   [gdtr + 2], EAX
+   MOV   AX, [ESP + 8]
+   MOV   [gdtr], AX
+   LGDT  [gdtr]
+   RET
 
-        .globl gdt_flush    /* Allows the C code to call gdt_flush().*/
-
-gdt_flush:
-    mov %eax, (%esp,4)  /* Get the pointer to the GDT, passed as a parameter. */
-    lgdt [eax]        /* Load the new GDT pointer */
-
-    mov ax, 0x10      ; 0x10 is the offset in the GDT to our data segment
-    mov ds, ax        ; Load all data segment selectors
-    mov es, ax
-    mov fs, ax
-    mov gs, ax
-    mov ss, ax
-    jmp 0x08:.flush   ; 0x08 is the offset to our code segment: Far jump!
-.flush:
-    ret
-
-/* Allows the C code to call idt_flush().*/
-        .globl
+reloadSegments:
+   ; Reload CS register containing code selector:
+   JMP   0x08:reload_CS ; 0x08 points at the new code selector
+.reload_CS:
+   ; Reload data segment registers:
+   MOV   AX, 0x10 ; 0x10 points at the new data selector
+   MOV   DS, AX
+   MOV   ES, AX
+   MOV   FS, AX
+   MOV   GS, AX
+   MOV   SS, AX
+   RET
+        
+global idt_flush
 idt_flush:
     mov eax, [esp+4]  ; Get the pointer to the IDT, passed as a parameter. 
     lidt [eax]        ; Load the IDT pointer.

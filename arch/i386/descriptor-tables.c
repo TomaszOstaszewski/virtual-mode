@@ -1,59 +1,115 @@
 //
-// descriptor_tables.c - Initialises the GDT and IDT, and defines the 
+// descriptor_tables.c - Initialises the GDT and IDT, and defines the
 //                       default ISR and IRQ handler.
 //                       Based on code from Bran's kernel development tutorials.
 //                       Rewritten for JamesM's kernel development tutorials.
 //
 
-#include <string.h>
+#include <stdint.h>
+#include <stddef.h>
+#include <stdio.h>
+#include "gdt.h"
 #include "isr.h"
-#include "pic-8259a.h"
-#include "common.h"
+//#include "pic-8259a.h"
+//#include "common.h"
 #include "descriptor-tables.h"
 
-// Lets us access our ASM functions from our C code.
-extern void gdt_flush(u32int);
-extern void idt_flush(u32int);
+// Each define here is for a specific flag in the descriptor.
+// Refer to the intel documentation for a description of what each one does.
+#define SEG_DESCTYPE(x) ((x) << 0x04)    // Descriptor type (0 for system, 1 for code/data)
+#define SEG_PRES(x) ((x) << 0x07)        // Present
+#define SEG_SAVL(x) ((x) << 0x0C)        // Available for system use
+#define SEG_LONG(x) ((x) << 0x0D)        // Long mode
+#define SEG_SIZE(x) ((x) << 0x0E)        // Size (0 for 16-bit, 1 for 32)
+#define SEG_GRAN(x) ((x) << 0x0F)        // Granularity (0 for 1B - 1MB, 1 for 4KB - 4GB)
+#define SEG_PRIV(x) (((x)&0x03) << 0x05) // Set privilege level (0 - 3)
+
+#define SEG_DATA_RD 0x00        // Read-Only
+#define SEG_DATA_RDA 0x01       // Read-Only, accessed
+#define SEG_DATA_RDWR 0x02      // Read/Write
+#define SEG_DATA_RDWRA 0x03     // Read/Write, accessed
+#define SEG_DATA_RDEXPD 0x04    // Read-Only, expand-down
+#define SEG_DATA_RDEXPDA 0x05   // Read-Only, expand-down, accessed
+#define SEG_DATA_RDWREXPD 0x06  // Read/Write, expand-down
+#define SEG_DATA_RDWREXPDA 0x07 // Read/Write, expand-down, accessed
+#define SEG_CODE_EX 0x08        // Execute-Only
+#define SEG_CODE_EXA 0x09       // Execute-Only, accessed
+#define SEG_CODE_EXRD 0x0A      // Execute/Read
+#define SEG_CODE_EXRDA 0x0B     // Execute/Read, accessed
+#define SEG_CODE_EXC 0x0C       // Execute-Only, conforming
+#define SEG_CODE_EXCA 0x0D      // Execute-Only, conforming, accessed
+#define SEG_CODE_EXRDC 0x0E     // Execute/Read, conforming
+#define SEG_CODE_EXRDCA 0x0F    // Execute/Read, conforming, accessed
+
+#define GDT_CODE_PL0                                                                               \
+    SEG_DESCTYPE(1) | SEG_PRES(1) | SEG_SAVL(0) | SEG_LONG(0) | SEG_SIZE(1) | SEG_GRAN(1) |        \
+        SEG_PRIV(0) | SEG_CODE_EXRD
+
+#define GDT_DATA_PL0                                                                               \
+    SEG_DESCTYPE(1) | SEG_PRES(1) | SEG_SAVL(0) | SEG_LONG(0) | SEG_SIZE(1) | SEG_GRAN(1) |        \
+        SEG_PRIV(0) | SEG_DATA_RDWR
+
+#define GDT_CODE_PL3                                                                               \
+    SEG_DESCTYPE(1) | SEG_PRES(1) | SEG_SAVL(0) | SEG_LONG(0) | SEG_SIZE(1) | SEG_GRAN(1) |        \
+        SEG_PRIV(3) | SEG_CODE_EXRD
+
+#define GDT_DATA_PL3                                                                               \
+    SEG_DESCTYPE(1) | SEG_PRES(1) | SEG_SAVL(0) | SEG_LONG(0) | SEG_SIZE(1) | SEG_GRAN(1) |        \
+        SEG_PRIV(3) | SEG_DATA_RDWR
+
+/** 
+ * @brief The Global Descriptor Table (GDT)
+ * @details This table holds segement descirptors, each one of them
+ * being 8 byte enitity that describes a given segment. 
+ * Indexes to this table are being loaded to the segment registers, 
+ * and this is how the code using CS, DS, and SS segments gets linked
+ * with the GDT table.
+ */
+static uint64_t gdt_table[5];
+
+/** 
+ * @brief Creates a single descriptor entry.
+ * 
+ * @param base 
+ * @param limit 
+ * @param flag 
+ * 
+ * @return Returns an 8 byte descriptor.
+ */ 
+static uint64_t create_descriptor(uint32_t base, uint32_t limit, uint16_t flag) {
+    uint64_t descriptor = 0;
+
+    // Create the high 32 bit segment
+    descriptor = limit & 0x000F0000;         // set limit bits 19:16
+    descriptor |= (flag << 8) & 0x00F0FF00;  // set type, p, dpl, s, g, d/b, l and avl fields
+    descriptor |= (base >> 16) & 0x000000FF; // set base bits 23:16
+    descriptor |= base & 0xFF000000;         // set base bits 31:24
+
+    // Shift by 32 to allow for low part of segment
+    descriptor <<= 32;
+
+    // Create the low 32 bit segment
+    descriptor |= base << 16;         // set base bits 15:0
+    descriptor |= limit & 0x0000FFFF; // set limit bits 15:0
+
+    printf("0x%x%x\n", (descriptor >> 32), descriptor & 0xffffffff);
+    return descriptor;
+}
 
 // Internal function prototypes.
-static void init_gdt();
-static void init_idt();
-static void gdt_set_gate(s32int,u32int,u32int,u8int,u8int);
-static void idt_set_gate(u8int,u32int,u16int,u8int);
+void idt_set_gate(u8int, u32int, u16int, u8int);
 
-gdt_entry_t gdt_entries[5];
-gdt_ptr_t   gdt_ptr;
-idt_entry_t idt_entries[256];
-idt_ptr_t   idt_ptr;
-
-// Set the value of one GDT entry.
-static void gdt_set_gate(s32int num, u32int base, u32int limit, u8int access, u8int gran)
-{
-    gdt_entries[num].base_low    = (base & 0xFFFF);
-    gdt_entries[num].base_middle = (base >> 16) & 0xFF;
-    gdt_entries[num].base_high   = (base >> 24) & 0xFF;
-
-    gdt_entries[num].limit_low   = (limit & 0xFFFF);
-    gdt_entries[num].granularity = (limit >> 16) & 0x0F;
-    
-    gdt_entries[num].granularity |= gran & 0xF0;
-    gdt_entries[num].access      = access;
+void init_gdt(void) {
+    gdt_table[0] = create_descriptor(0, 0, 0);
+    gdt_table[1] = create_descriptor(0, 0x000FFFFF, (GDT_CODE_PL0));
+    gdt_table[2] = create_descriptor(0, 0x000FFFFF, (GDT_DATA_PL0));
+    gdt_table[3] = create_descriptor(0, 0x000FFFFF, (GDT_CODE_PL3));
+    gdt_table[4] = create_descriptor(0, 0x000FFFFF, (GDT_DATA_PL3));
+    set_gdt((uint32_t)&gdt_table[0], sizeof(gdt_table));
+    printf("%s okay!\n", __func__);
 }
 
-static void init_gdt()
-{
-    gdt_ptr.limit = (sizeof(gdt_entry_t) * 5) - 1;
-    gdt_ptr.base  = (u32int)&gdt_entries;
-
-    gdt_set_gate(0, 0, 0, 0, 0);                // Null segment
-    gdt_set_gate(1, 0, 0xFFFFFFFF, 0x9A, 0xCF); // Code segment
-    gdt_set_gate(2, 0, 0xFFFFFFFF, 0x92, 0xCF); // Data segment
-    gdt_set_gate(3, 0, 0xFFFFFFFF, 0xFA, 0xCF); // User mode code segment
-    gdt_set_gate(4, 0, 0xFFFFFFFF, 0xF2, 0xCF); // User mode data segment
-
-    gdt_flush((u32int)&gdt_ptr);
-}
-
+#if 0
 static void idt_set_gate(u8int num, u32int base, u16int sel, u8int flags)
 {
     idt_entries[num].base_lo = base & 0xFFFF;
@@ -140,4 +196,4 @@ void init_descriptor_tables()
     init_idt();
 }
 
-
+#endif

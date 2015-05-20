@@ -1,10 +1,11 @@
 define SETUP_VARS
 
-$(1)_OBJ_DIR:=$(BUILD_ROOT)$(1)/
+$(1)_OBJ_DIR:=$$(BUILD_ROOT)$(1)/
 $(1)_SRC:=$$(addprefix $$($(1)_DIR),$$($(1)_FILES))
 
 $(1)_OBJ+=$$(addprefix $$($(1)_OBJ_DIR),$$(patsubst %.c,%.o,$$(filter %.c,$$($(1)_FILES))))
 $(1)_OBJ+=$$(addprefix $$($(1)_OBJ_DIR),$$(patsubst %.s,%.o,$$(filter %.s,$$($(1)_FILES))))
+$(1)_OBJ+=$$(addprefix $$($(1)_OBJ_DIR),$$(patsubst %.S,%.o,$$(filter %.S,$$($(1)_FILES))))
 
 $(1)_DEP:=$$(patsubst %.o,%.d,$$($(1)_OBJ))
 ALL_OBJECTS+=$$($(1)_OBJ)
@@ -27,6 +28,10 @@ dirs-$(1):
 $$($(1)_OBJ_DIR)%.o: $$($(1)_DIR)%.c | $$$$(@D)/.
 	@$(ECHO_CC) $$@
 	$(NOECHO)$(CC)  $$(CFLAGS)   $$(CPPFLAGS) $$(DEPGEN_FLAGS) -o $$@ -c $$<
+
+$$($(1)_OBJ_DIR)%.o: $$($(1)_DIR)%.S | $$$$(@D)/.
+	@$(ECHO_NASM) $$@
+	$(NOECHO)$(NASM) -f elf32 -o $$(@) $$(<)
 
 $$($(1)_OBJ_DIR)%.o: $$($(1)_DIR)%.s | $$$$(@D)/.
 	@$(ECHO_AS) $$@

@@ -2,25 +2,6 @@
 .DEFAULT_GOAL:=all
 .SECONDEXPANSION:
 
-ECHO_DEP        := echo "       DEP     "
-ECHO_CC         := echo "       CC      "
-ECHO_AS         := echo "       AS      "
-ECHO_CXX        := echo "       CXX     "
-ECHO_LD         := echo "       LD      "
-ECHO_MD         := echo "       MD      "
-ECHO_ISO        := echo "       ISO     "
-ECHO_STRIP      := echo "       STRIP   "
-ECHO_CP         := echo "       CP      "
-ECHO_RM         := echo "       RM      "
-
-ifeq ($(V),1)
-NOECHO  :=
-CP      :=cp -v
-else
-NOECHO  :=@
-CP      :=cp
-endif
-
 
 CROSS_COMPILE   :=i686-unknown-elf-
 PATH    	:=/home/tomek/x-tools/${CROSS_COMPILE:%-=%}/bin/:${PATH}
@@ -35,6 +16,7 @@ MD5CHK  :=0
 AS      :=gcc
 CC      :=gcc
 CXX     :=g++
+NASM    :=nasm
 CFLAGS  :=-O0 -ggdb -m32 -Wall -Werror -nostdlib \
  -fno-omit-frame-pointer -ffreestanding -fno-stack-protector \
  -ffunction-sections -fdata-sections
@@ -44,6 +26,7 @@ DEPGEN_FLAGS =-MP -MMD \
  -MT '$(@D)/$(*).o $(@D)/$(*).d $(@D)/$(*).i $(@D)/$(*).S $(@D)/$(*).def dirs-$$(1) doxy-$$(1) $$(BUILD_ROOT)cscope.files bundle log'
 LDSCRIPT:=./arch/i386/link.ld
 
+include mk/eyecandy.mk
 include mk/macros.mk
 include mk/autodir.mk
 

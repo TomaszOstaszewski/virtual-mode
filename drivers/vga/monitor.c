@@ -144,8 +144,8 @@ void monitor_write_hex(uint32_t value) {
     static const char hex_num_2_hex_digit[] = {'0', '1', '2', '3', '4', '5', '6', '7',
                                                '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
     uint32_t hex_num;
-    char printout[] = "0x00000000";
-    char *pos = &printout[2];
+    char printout[] = "00000000";
+    char *pos = &printout[0];
     /* Write down 8 characters */
     hex_num = (value >> 28) & 0x0f;
     *pos++ = hex_num_2_hex_digit[hex_num];
