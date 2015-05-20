@@ -1,60 +1,30 @@
 /**
  * @file kmain.c
+ * @brief Entry point for 32 bit kernel
  */
-// main.c -- Defines the C-code kernel entry point, calls initialisation routines.
-//           Made for JamesM's tutorials <www.jamesmolloy.co.uk>
 
 #include <stdio.h>
-#include "monitor.h"
+#include "descriptor-tables.h"
 #include "intrisics.h"
 
 struct multiboot;
-void init_gdt(void);
-void init_idt(void);
 
 void parse_cr0(uint32_t cr0) {
     int paging = cr0 >> 31;
     int cd = (cr0 >> 30) & 0x1;
-    int nw = (cr0 >> 29) & 0x1;
-    int am = (cr0 >> 18) & 0x1;
-    int wp = (cr0 >> 16) & 0x1;
-    int ne = (cr0 >> 5) & 0x1;
-    int et = (cr0 >> 4) & 0x1;
-    int pe = (cr0 >> 0) & 0x1;
-    monitor_write("paging:=");
-    monitor_write_hex(paging);
-    monitor_write("\ncache disabled:=");
-    monitor_write_hex(cd);
-    monitor_write("\nnot write-through:=");
-    monitor_write_hex(nw);
-    monitor_write("\nalignment-mask:=");
-    monitor_write_hex(am);
-    monitor_write("\nwrite-protect:=");
-    monitor_write_hex(wp);
-    monitor_write("\nnumeric-error:=");
-    monitor_write_hex(ne);
-    monitor_write("\nextension-type:=");
-    monitor_write_hex(et);
-    monitor_write("\nprotected-mode:=");
-    monitor_write_hex(pe);
+    int pme = (cr0 >> 0) & 0x1;
+    printf("CR0=%x\npg=%x,cd=%x,pme=%x\n", cr0, paging, cd, pme);
 }
 
+void parse_cr3(uint32_t cr3) { printf("Page dir at %x\n", cr3); }
+
 int kernel_main(void) {
-    uint64_t mmap = 0xcafebabe;
-    printf("Hello, world at %x!\n", mmap);
-    init_gdt();
-    monitor_write_hex((mmap >> 32));
-    monitor_write_hex((mmap & 0xffffffff));
-    monitor_write_hex(read_cr3());
-    monitor_write("Hello, world!\n");
-    monitor_write_hex(read_cr0());
-    monitor_put('\n');
-    monitor_write("Interrupts : ");
-    if (are_interrupts_enabled()) {
-        monitor_write("enabled\n");
-    } else {
-        monitor_write("disabled\n");
-    }
+    printf("%s : Hello, world!\n", __func__);
+    //    init_idt();
+    printf("Interrupts: %s\n", are_interrupts_enabled() ? "enabled" : "disabled");
+    parse_cr3(read_cr3());
     parse_cr0(read_cr0());
+    init_gdt();
+    init_idt();
     return 0;
 }

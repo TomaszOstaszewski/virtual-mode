@@ -5,4 +5,5 @@ klibc_stdio_FILES       :=\
  puts.c    \
 
 klibc_stdio_INCLUDES:=\
- -I./drivers/vga/
+ -I./drivers/vga/   \
+ -I./klibc/include/ \

@@ -6,10 +6,10 @@ ldtr:
         DW 0
         DD 0
         
-        section .text
+section .text
+        
         global set_gdt
 set_gdt:
-        MOV EAX,[ESP]
         MOV   EAX, [esp + 4]
         MOV   [gdtr + 2], EAX
         MOV   AX, [ESP + 8]
@@ -28,7 +28,7 @@ reload_CS:
    RET
         
 global set_idt
-idt_flush:
+set_idt:
         MOV EAX, [esp + 4]  ; get the 'base' parameter from the stack
         MOV [ldtr + 2], EAX ; move it to the 'base' member
         MOV AX, [ESP + 8]   ; get the 'limit' parameter off the stack

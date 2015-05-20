@@ -6,3 +6,6 @@ boot_FILES      :=\
  crtn.s   \
  descriptor-tables.c \
 
+boot_INCLUDES:=\
+ -I./klibc/include/
+

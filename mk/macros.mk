@@ -1,19 +1,22 @@
 define SETUP_VARS
 
-$(1)_OBJ_DIR:=$$(BUILD_ROOT)$(1)/
-$(1)_SRC:=$$(addprefix $$($(1)_DIR),$$($(1)_FILES))
+$(1)_OBJ_DIR=$$(BUILD_ROOT)$(1)/
+$(1)_SRC=$$(addprefix $$($(1)_DIR),$$($(1)_FILES))
 
 $(1)_OBJ+=$$(addprefix $$($(1)_OBJ_DIR),$$(patsubst %.c,%.o,$$(filter %.c,$$($(1)_FILES))))
 $(1)_OBJ+=$$(addprefix $$($(1)_OBJ_DIR),$$(patsubst %.s,%.o,$$(filter %.s,$$($(1)_FILES))))
 $(1)_OBJ+=$$(addprefix $$($(1)_OBJ_DIR),$$(patsubst %.S,%.o,$$(filter %.S,$$($(1)_FILES))))
 
 $(1)_DEP:=$$(patsubst %.o,%.d,$$($(1)_OBJ))
-ALL_OBJECTS+=$$($(1)_OBJ)
-ALL_DEPENDS+=$$($(1)_DEP)
+ALL_SRC+=$$($(1)_SRC)
+ALL_OBJ+=$$($(1)_OBJ)
+ALL_DEP+=$$($(1)_DEP)
 $$($(1)_OBJ_DIR)% : CPPFLAGS+=$$($(1)_INCLUDES)
 
 .PHONY: echo-$(1)
 echo-$(1):
+	@echo $(1)_DIR $$($(1)_DIR)
+	@echo $(1)_FILES $$($(1)_FILES)
 	@echo $(1)_SRC $$($(1)_SRC)
 	@echo $(1)_OBJ $$($(1)_OBJ)
 	@echo $(1)_DEP $$($(1)_DEP)
@@ -31,7 +34,7 @@ $$($(1)_OBJ_DIR)%.o: $$($(1)_DIR)%.c | $$$$(@D)/.
 
 $$($(1)_OBJ_DIR)%.o: $$($(1)_DIR)%.S | $$$$(@D)/.
 	@$(ECHO_NASM) $$@
-	$(NOECHO)$(NASM) -f elf32 -o $$(@) $$(<)
+	$(NOECHO)$(NASM) -f elf32 -o $$(@) -l $$(@D)/$$(*).lst $$(<)
 
 $$($(1)_OBJ_DIR)%.o: $$($(1)_DIR)%.s | $$$$(@D)/.
 	@$(ECHO_AS) $$@
@@ -48,9 +51,9 @@ $$($(1)_OBJ_DIR)%.def: $$($(1)_DIR)%.c | $$$$(@D)/.
 	$(NOECHO)$(ECHO_CC) $$@; $(CC) $$(CPPFLAGS) $(INCLUDE_PATH) -E -dM -o $$@ $$<
 
 # Rules for creating assembly files
-$$($(1)_OBJ_DIR)%.s: $$$$(call to-md5,$$($(1)_DIR)%.c $$$$^) | $$$$(@D)/.
+$$($(1)_OBJ_DIR)%.s: $$($(1)_DIR)%.c | $$$$(@D)/.
 	@$(ECHO_CC) $$@
-	$(NOECHO)$(CC) $$(CPPFLAGS) $(INCLUDE_PATH) $(DEPGEN_FLAGS) $(CFLAGS) $$($(1)_CFLAGS) -S -o $$@ $$<
+	$(NOECHO)$(CC) $$(CPPFLAGS)  $$(CFLAGS) $$(DEPGEN_FLAGS) -S -o $$@ $$(<)
 
 endef
 

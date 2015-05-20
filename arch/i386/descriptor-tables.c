@@ -7,7 +7,8 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include <stdio.h>
+#include "stdio.h"
+#include "string.h"
 #include "gdt.h"
 #include "isr.h"
 //#include "pic-8259a.h"
@@ -23,6 +24,13 @@
 #define SEG_SIZE(x) ((x) << 0x0E)        // Size (0 for 16-bit, 1 for 32)
 #define SEG_GRAN(x) ((x) << 0x0F)        // Granularity (0 for 1B - 1MB, 1 for 4KB - 4GB)
 #define SEG_PRIV(x) (((x)&0x03) << 0x05) // Set privilege level (0 - 3)
+
+#define IGATE_PRES(x) ((x) << 0x0f)     // Interrupt gate present flag
+#define IGATE_DPL(x) ((x)&0x03 << 0x0D) // Interrupt descriptor privilege level
+#define INTRRGATE_ID 0xE0
+#define TRAPGATE_ID 0xF0
+
+#define INTR_GATE_32BIT (IGATE_PRES(1) | IGATE_DPL(0) | INTRRGATE_ID)
 
 #define SEG_DATA_RD 0x00        // Read-Only
 #define SEG_DATA_RDA 0x01       // Read-Only, accessed
@@ -57,26 +65,31 @@
     SEG_DESCTYPE(1) | SEG_PRES(1) | SEG_SAVL(0) | SEG_LONG(0) | SEG_SIZE(1) | SEG_GRAN(1) |        \
         SEG_PRIV(3) | SEG_DATA_RDWR
 
-/** 
+/**
  * @brief The Global Descriptor Table (GDT)
  * @details This table holds segement descirptors, each one of them
- * being 8 byte enitity that describes a given segment. 
- * Indexes to this table are being loaded to the segment registers, 
+ * being 8 byte enitity that describes a given segment.
+ * Indexes to this table are being loaded to the segment registers,
  * and this is how the code using CS, DS, and SS segments gets linked
  * with the GDT table.
  */
 static uint64_t gdt_table[5];
 
-/** 
+/**
+ * @brief The Interrupt Descriptor Table (IDT)
+ */
+static uint64_t idt_table[32];
+
+/**
  * @brief Creates a single descriptor entry.
- * 
- * @param base 
- * @param limit 
- * @param flag 
- * 
+ *
+ * @param base
+ * @param limit
+ * @param flag
+ *
  * @return Returns an 8 byte descriptor.
- */ 
-static uint64_t create_descriptor(uint32_t base, uint32_t limit, uint16_t flag) {
+ */
+static uint64_t create_gdt_descriptor(uint32_t base, uint32_t limit, uint16_t flag) {
     uint64_t descriptor = 0;
 
     // Create the high 32 bit segment
@@ -92,108 +105,86 @@ static uint64_t create_descriptor(uint32_t base, uint32_t limit, uint16_t flag) 
     descriptor |= base << 16;         // set base bits 15:0
     descriptor |= limit & 0x0000FFFF; // set limit bits 15:0
 
-    printf("0x%x%x\n", (descriptor >> 32), descriptor & 0xffffffff);
+    printf("0x%x%x\n", (uint32_t)(descriptor >> 32), (uint32_t)(descriptor & 0xffffffff));
     return descriptor;
 }
 
-// Internal function prototypes.
-void idt_set_gate(u8int, u32int, u16int, u8int);
+static void __attribute__((stdcall)) get_gdt(uint32_t *p_base, uint16_t *p_offset) {
+    uint8_t buf[sizeof(uint16_t) + sizeof(uint32_t)];
+    asm volatile("sgdt %[result]" : [result] "=m"(buf));
+    memcpy(p_offset, &buf[0], sizeof(*p_offset));
+    memcpy(p_base, &buf[2], sizeof(*p_base));
+}
+
+void __attribute__((stdcall)) get_idt(uint32_t *p_base, uint16_t *p_offset) {
+  uint8_t buf[sizeof(uint16_t) + sizeof(uint32_t)] = { 0xca, 0xfe, 0xba, 0xbe, 0xde, 0xad, };
+    asm volatile("sidt %[result]" : [result] "=m"(buf));
+    memcpy(p_offset, &buf[0], sizeof(*p_offset));
+    memcpy(p_base, &buf[2], sizeof(*p_base));
+}
+
+static uint64_t create_idt_intr_gate_desc(uint32_t handler_addr, uint16_t base) {
+    uint64_t interrupt_gate_desc;
+    interrupt_gate_desc = handler_addr & 0xffff0000;
+    interrupt_gate_desc |= INTR_GATE_32BIT & 0x0000ffff;
+    interrupt_gate_desc <<= 32;
+    interrupt_gate_desc |= base << 16;
+    interrupt_gate_desc |= handler_addr & 0x0000ffff;
+    printf("%s: %x %x := %x", __func__, handler_addr, (uint32_t)base,
+           (uint32_t)(interrupt_gate_desc >> 32));
+    printf("%x\n", (uint32_t)(interrupt_gate_desc & 0xffffffff));
+
+    printf("%s: %x %x := %x%x\n", __func__, handler_addr, (uint32_t)base,
+           (uint32_t)(interrupt_gate_desc >> 32),
+           (uint32_t)(interrupt_gate_desc & 0xffffffff));
+
+    return interrupt_gate_desc;
+}
+
 
 void init_gdt(void) {
-    gdt_table[0] = create_descriptor(0, 0, 0);
-    gdt_table[1] = create_descriptor(0, 0x000FFFFF, (GDT_CODE_PL0));
-    gdt_table[2] = create_descriptor(0, 0x000FFFFF, (GDT_DATA_PL0));
-    gdt_table[3] = create_descriptor(0, 0x000FFFFF, (GDT_CODE_PL3));
-    gdt_table[4] = create_descriptor(0, 0x000FFFFF, (GDT_DATA_PL3));
+    uint32_t base;
+    uint16_t offset;
+    gdt_table[0] = create_gdt_descriptor(0, 0, 0);
+    gdt_table[1] = create_gdt_descriptor(0, 0x000FFFFF, (GDT_CODE_PL0));
+    gdt_table[2] = create_gdt_descriptor(0, 0x000FFFFF, (GDT_DATA_PL0));
+    gdt_table[3] = create_gdt_descriptor(0, 0x000FFFFF, (GDT_CODE_PL3));
+    gdt_table[4] = create_gdt_descriptor(0, 0x000FFFFF, (GDT_DATA_PL3));
+    get_gdt(&base, &offset);
+    printf("Current gdt base, offset: %x %x\n", base, (uint32_t)offset);
     set_gdt((uint32_t)&gdt_table[0], sizeof(gdt_table));
-    printf("%s okay!\n", __func__);
+    get_gdt(&base, &offset);
+    printf("new gdt base, offset: %x %x\n", base, (uint32_t)offset);
 }
 
-#if 0
-static void idt_set_gate(u8int num, u32int base, u16int sel, u8int flags)
-{
-    idt_entries[num].base_lo = base & 0xFFFF;
-    idt_entries[num].base_hi = (base >> 16) & 0xFFFF;
+void int_0_handler(void) {}
 
-    idt_entries[num].sel     = sel;
-    idt_entries[num].always0 = 0;
-    // We must uncomment the OR below when we get to using user-mode.
-    // It sets the interrupt gate's privilege level to 3.
-    idt_entries[num].flags   = flags /* | 0x60 */;
-}
-static void init_idt()
-{
-    idt_ptr.limit = sizeof(idt_entry_t) * 256 -1;
-    idt_ptr.base  = (u32int)&idt_entries;
+void int_1_handler(void) {}
 
-    memset(&idt_entries, 0, sizeof(idt_entry_t)*256);
+void int_2_handler(void) {}
 
-    // Remap the irq table.
-	pic_init(0x20, 0x28);
-
-    idt_set_gate( 0, (u32int)isr0 , 0x08, 0x8E);
-    idt_set_gate( 1, (u32int)isr1 , 0x08, 0x8E);
-    idt_set_gate( 2, (u32int)isr2 , 0x08, 0x8E);
-    idt_set_gate( 3, (u32int)isr3 , 0x08, 0x8E);
-    idt_set_gate( 4, (u32int)isr4 , 0x08, 0x8E);
-    idt_set_gate( 5, (u32int)isr5 , 0x08, 0x8E);
-    idt_set_gate( 6, (u32int)isr6 , 0x08, 0x8E);
-    idt_set_gate( 7, (u32int)isr7 , 0x08, 0x8E);
-    idt_set_gate( 8, (u32int)isr8 , 0x08, 0x8E);
-    idt_set_gate( 9, (u32int)isr9 , 0x08, 0x8E);
-    idt_set_gate(10, (u32int)isr10, 0x08, 0x8E);
-    idt_set_gate(11, (u32int)isr11, 0x08, 0x8E);
-    idt_set_gate(12, (u32int)isr12, 0x08, 0x8E);
-    idt_set_gate(13, (u32int)isr13, 0x08, 0x8E);
-    idt_set_gate(14, (u32int)isr14, 0x08, 0x8E);
-    idt_set_gate(15, (u32int)isr15, 0x08, 0x8E);
-    idt_set_gate(16, (u32int)isr16, 0x08, 0x8E);
-    idt_set_gate(17, (u32int)isr17, 0x08, 0x8E);
-    idt_set_gate(18, (u32int)isr18, 0x08, 0x8E);
-    idt_set_gate(19, (u32int)isr19, 0x08, 0x8E);
-    idt_set_gate(20, (u32int)isr20, 0x08, 0x8E);
-    idt_set_gate(21, (u32int)isr21, 0x08, 0x8E);
-    idt_set_gate(22, (u32int)isr22, 0x08, 0x8E);
-    idt_set_gate(23, (u32int)isr23, 0x08, 0x8E);
-    idt_set_gate(24, (u32int)isr24, 0x08, 0x8E);
-    idt_set_gate(25, (u32int)isr25, 0x08, 0x8E);
-    idt_set_gate(26, (u32int)isr26, 0x08, 0x8E);
-    idt_set_gate(27, (u32int)isr27, 0x08, 0x8E);
-    idt_set_gate(28, (u32int)isr28, 0x08, 0x8E);
-    idt_set_gate(29, (u32int)isr29, 0x08, 0x8E);
-    idt_set_gate(30, (u32int)isr30, 0x08, 0x8E);
-    idt_set_gate(31, (u32int)isr31, 0x08, 0x8E);
-	/* Install IRQ handles */
-    idt_set_gate(32, (u32int)irq0, 0x08, 0x8E);
-    idt_set_gate(33, (u32int)irq1, 0x08, 0x8E);
-    idt_set_gate(34, (u32int)irq2, 0x08, 0x8E);
-    idt_set_gate(35, (u32int)irq3, 0x08, 0x8E);
-    idt_set_gate(36, (u32int)irq4, 0x08, 0x8E);
-    idt_set_gate(37, (u32int)irq5, 0x08, 0x8E);
-    idt_set_gate(38, (u32int)irq6, 0x08, 0x8E);
-    idt_set_gate(39, (u32int)irq7, 0x08, 0x8E);
-    idt_set_gate(40, (u32int)irq8, 0x08, 0x8E);
-    idt_set_gate(41, (u32int)irq9, 0x08, 0x8E);
-    idt_set_gate(42, (u32int)irq10, 0x08, 0x8E);
-    idt_set_gate(43, (u32int)irq11, 0x08, 0x8E);
-    idt_set_gate(44, (u32int)irq12, 0x08, 0x8E);
-    idt_set_gate(45, (u32int)irq13, 0x08, 0x8E);
-    idt_set_gate(46, (u32int)irq14, 0x08, 0x8E);
-    idt_set_gate(47, (u32int)irq15, 0x08, 0x8E);
-
-    idt_flush((u32int)&idt_ptr);
+void int_3_handler(void) {
+    printf("%s ", __func__);
+    asm volatile("hlt");
+    for (;;) {
+        ;
+    }
 }
 
-// Initialisation routine - zeroes all the interrupt service routines,
-// initialises the GDT and IDT.
-void init_descriptor_tables()
-{
-	init_handlers_table();
-
-    // Initialise the global descriptor table.
-    init_gdt();
-    // Initialise the interrupt descriptor table.
-    init_idt();
+void init_idt(void) {
+    memset(&idt_table, 0, sizeof(idt_table));
+    /* Offset to the CS selector in the GDT */
+    uint16_t cs_selector = 1 * sizeof(uint64_t);
+    idt_table[0] = create_idt_intr_gate_desc((uint32_t)&int_0_handler, cs_selector);
+    idt_table[1] = create_idt_intr_gate_desc((uint32_t)&int_1_handler, cs_selector);
+    idt_table[2] = create_idt_intr_gate_desc((uint32_t)&int_2_handler, cs_selector);
+    idt_table[3] = create_idt_intr_gate_desc((uint32_t)&int_3_handler, cs_selector);
+    uint32_t base;
+    uint16_t offset;
+    get_idt(&base, &offset);
+    printf("%s : IDT at base, offset:", __func__);
+    printf("%x, %x\n", base, offset);
+    //    set_idt((uint32_t)&idt_table[0], sizeof(uint64_t) * 4);
+    //    asm volatile("INT3");
 }
 
-#endif
