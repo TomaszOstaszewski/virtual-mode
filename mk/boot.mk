@@ -4,6 +4,8 @@ boot_FILES      :=\
  gdt.S    \
  crti.s   \
  crtn.s   \
+ interrupt.S \
+ isr.c \
  descriptor-tables.c \
 
 boot_INCLUDES:=\

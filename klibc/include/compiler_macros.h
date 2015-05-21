@@ -4,9 +4,11 @@
 #if defined __GNUC__
 #define STDCALL __attribute__((stdcall))
 #define FMT_PRINTF(x,y) __attribute__((format(printf,x,y)))
+#define PACKED __attribute__((packed))
 #else
 #define STDCALL
 #define FMT_PRINTF(x,y)
+#define PACKED
 #endif
 
 #endif /* COMPILER_MACROS_H */
