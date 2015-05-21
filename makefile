@@ -18,7 +18,7 @@ GCCINC  :=$(shell $(CC) -print-file-name=include)
 BUILD_ROOT      :=$(firstword $(subst -, ,$(shell $(CC) -dumpmachine)))/
 $(info GCCINC $(GCCINC))
 NASM    :=nasm
-CFLAGS  :=-O2 -ggdb -m32 -Wall -Werror \
+CFLAGS  :=-O1 -fno-schedule-insns -ggdb -m32 -Wall -Werror \
  -nostdlib -nostdinc -I$(shell $(CC) -print-file-name=include)  \
  -fno-omit-frame-pointer -ffreestanding -fno-stack-protector \
  -ffunction-sections -fdata-sections

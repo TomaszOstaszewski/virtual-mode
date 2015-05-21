@@ -25,9 +25,9 @@
 #define SEG_GRAN(x) ((x) << 0x0F)        // Granularity (0 for 1B - 1MB, 1 for 4KB - 4GB)
 #define SEG_PRIV(x) (((x)&0x03) << 0x05) // Set privilege level (0 - 3)
 
-#define IGATE_PRES(x) ((x) << 0x0f)     // Interrupt gate present flag
-#define IGATE_DPL(x) ((x)&0x03 << 0x0D) // Interrupt descriptor privilege level
-#define INTRRGATE_ID 0xE0
+#define IGATE_PRES(x) ((x) << 0x0F)     // Interrupt gate present flag
+#define IGATE_DPL(x) (((x)&0x03) << 0x0D) // Interrupt descriptor privilege level
+#define INTRRGATE_ID ((0x0e << 8))
 #define TRAPGATE_ID 0xF0
 
 #define INTR_GATE_32BIT (IGATE_PRES(1) | IGATE_DPL(0) | INTRRGATE_ID)
@@ -126,9 +126,10 @@ void __attribute__((stdcall)) get_idt(uint32_t *p_base, uint16_t *p_offset) {
 static uint64_t create_idt_intr_gate_desc(uint32_t handler_addr, uint16_t base) {
     uint64_t interrupt_gate_desc;
     interrupt_gate_desc = handler_addr & 0xffff0000;
-    interrupt_gate_desc |= INTR_GATE_32BIT & 0x0000ffff;
+    interrupt_gate_desc |= INTR_GATE_32BIT & 0x0000ff00;
+    interrupt_gate_desc &= 0xffffff00;
     interrupt_gate_desc <<= 32;
-    interrupt_gate_desc |= base << 16;
+    interrupt_gate_desc |= (base << 16) & 0xffff0000;
     interrupt_gate_desc |= handler_addr & 0x0000ffff;
     printf("%s: %x %x := %x", __func__, handler_addr, (uint32_t)base,
            (uint32_t)(interrupt_gate_desc >> 32));
@@ -184,7 +185,7 @@ void init_idt(void) {
     get_idt(&base, &offset);
     printf("%s : IDT at base, offset:", __func__);
     printf("%x, %x\n", base, offset);
-    //    set_idt((uint32_t)&idt_table[0], sizeof(uint64_t) * 4);
-    //    asm volatile("INT3");
+    set_idt((uint32_t)&idt_table[0], sizeof(uint64_t) * 4);
+     asm volatile("INT3");
 }
 
