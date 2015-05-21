@@ -1,4 +1,4 @@
-define SETUP_VARS
+define ADD_COMPONENT
 
 $(1)_OBJ_DIR=$$(BUILD_ROOT)$(1)/
 $(1)_SRC=$$(addprefix $$($(1)_DIR),$$($(1)_FILES))
@@ -7,7 +7,7 @@ $(1)_OBJ+=$$(addprefix $$($(1)_OBJ_DIR),$$(patsubst %.c,%.o,$$(filter %.c,$$($(1
 $(1)_OBJ+=$$(addprefix $$($(1)_OBJ_DIR),$$(patsubst %.s,%.o,$$(filter %.s,$$($(1)_FILES))))
 $(1)_OBJ+=$$(addprefix $$($(1)_OBJ_DIR),$$(patsubst %.S,%.o,$$(filter %.S,$$($(1)_FILES))))
 
-$(1)_DEP:=$$(patsubst %.o,%.d,$$($(1)_OBJ))
+$(1)_DEP=$$(patsubst %.o,%.d,$$($(1)_OBJ))
 ALL_SRC+=$$($(1)_SRC)
 ALL_OBJ+=$$($(1)_OBJ)
 ALL_DEP+=$$($(1)_DEP)
@@ -41,7 +41,7 @@ $$($(1)_OBJ_DIR)%.o: $$($(1)_DIR)%.s | $$$$(@D)/.
 	$(NOECHO)$(CC) -m32 -c $$(AFLAGS) -Wa,-al=$$(@D)/$$(*).lst $$(INCLUDE_PATH) -o $$@ $$<
 
 # Rules for creating preprocessor source files
-$$($(1)_OBJ_DIR)%.c: $$($(1)_DIR)%.c | $$$$(@D)/.
+$$($(1)_OBJ_DIR)%.i: $$($(1)_DIR)%.c | $$$$(@D)/.
 	@$(ECHO_CC) $$@
 	$(NOECHO) $(CC) $$(CPPFLAGS) $(INCLUDE_PATH) -E -o $$@ $$<
 

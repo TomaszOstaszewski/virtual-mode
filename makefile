@@ -16,7 +16,6 @@ AS      :=$(CROSS_COMPILE)gcc
 CC      :=$(CROSS_COMPILE)gcc
 GCCINC  :=$(shell $(CC) -print-file-name=include)
 BUILD_ROOT      :=$(firstword $(subst -, ,$(shell $(CC) -dumpmachine)))/
-$(info GCCINC $(GCCINC))
 NASM    :=nasm
 CFLAGS  :=-O1 -fno-schedule-insns -ggdb -m32 -Wall -Werror \
  -nostdlib -nostdinc -I$(shell $(CC) -print-file-name=include)  \
@@ -39,7 +38,7 @@ COMPONENTS      :=\
  klibc_stdio \
  klibc_string \
 
-$(foreach comp,$(COMPONENTS),$(eval $(call SETUP_VARS,$(comp))))
+$(foreach comp,$(COMPONENTS),$(eval $(call ADD_COMPONENT,$(comp))))
 
 -include $(ALL_DEP)
 
