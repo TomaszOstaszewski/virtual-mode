@@ -189,7 +189,7 @@ void init_idt(void) {
     get_idt(&base, &offset);
     printf("%s : IDT at base, offset:", __func__);
     printf("%x, %x\n", base, offset);
-    set_idt((uint32_t)&idt_table[0], sizeof(uint64_t) * 4);
+    set_idt((uint32_t)&idt_table[0], sizeof(idt_table));
     asm volatile("INT3");
-    asm volatile("INT %[num]" : : [num] "I"(1));
+    asm volatile("INT %[num]" : : [num] "K"(22));
 }
