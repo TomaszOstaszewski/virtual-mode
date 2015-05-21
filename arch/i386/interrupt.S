@@ -30,6 +30,8 @@ irq__%1:
 section .rodata
 global isr_table
 global isr_table_size
+global irq_table
+global irq_table_size
 
 isr_table:
         dd isr__0
@@ -67,8 +69,6 @@ isr_table:
 isr_table_size: 
        dd ($ - isr_table)>>2
         
-global irq_table
-global irq_table_size
 irq_table:
         dd irq__0
         dd irq__1

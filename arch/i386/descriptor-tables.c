@@ -137,8 +137,10 @@ uint64_t STDCALL create_idt_intr_gate_desc(uint32_t handler_addr, uint16_t base)
     interrupt_gate_desc <<= 32;
     interrupt_gate_desc |= (base << 16) & 0xffff0000;
     interrupt_gate_desc |= handler_addr & 0x0000ffff;
+    #if 0
     printf("%s: %x %x := %x%x\n", __func__, handler_addr, (uint32_t)base,
            (uint32_t)(interrupt_gate_desc >> 32), (uint32_t)(interrupt_gate_desc & 0xffffffff));
+    #endif
     return interrupt_gate_desc;
 }
 
@@ -189,4 +191,5 @@ void init_idt(void) {
     printf("%x, %x\n", base, offset);
     set_idt((uint32_t)&idt_table[0], sizeof(uint64_t) * 4);
     asm volatile("INT3");
+    asm volatile("INT %[num]" : : [num] "I"(1));
 }
