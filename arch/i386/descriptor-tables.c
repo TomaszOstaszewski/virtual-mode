@@ -191,5 +191,6 @@ void init_idt(void) {
     printf("%x, %x\n", base, offset);
     set_idt((uint32_t)&idt_table[0], sizeof(idt_table));
     asm volatile("INT3");
+    asm volatile("INT3");
     asm volatile("INT %[num]" : : [num] "K"(22));
 }

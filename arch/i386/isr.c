@@ -1,43 +1,40 @@
 #include "isr.h"
 #include "stdio.h"
 
-
 typedef enum e_regs_indexes {
-  REG_IDX_EFLAGS = 10,
-  REG_IDX_CS = 9,
-  REG_IDX_EIP = 8,
-    REG_IDX_EAX = 7,
-    REG_IDX_ECX = 6,
-    REG_IDX_EDX = 5,
-    REG_IDX_EBX = 4,
-    REG_IDX_ESP_USELESS = 3,
-    REG_IDX_EBP = 2,
-    REG_IDX_ESI = 1,
-    REG_IDX_EDI = 0,
+    REGIDX_EFLAGS = 12,
+    REGIDX_CS = 11,
+    REGIDX_EIP = 10,
+    REGIDX_ERRCODE = 9,
+    REGIDX_ISRNUM = 8,
+    REGIDX_EAX = 7,
+    REGIDX_ECX = 6,
+    REGIDX_EDX = 5,
+    REGIDX_EBX = 4,
+    REGIDX_ESP_USELESS = 3,
+    REGIDX_EBP = 2,
+    REGIDX_ESI = 1,
+    REGIDX_EDI = 0,
 } e_regs_indexes;
 
 void isr_handler(const uint32_t *p_regs) {
     printf("%s : %p\n"
-           "eax: %x\n"
+           "eax: %x "
            "ecx: %x\n"
-           "edx: %x\n"
+           "edx: %x "
            "ebx: %x\n"
-           "esi: %x\n"
+           "esi: %x "
            "edi: %x\n"
-           , __func__, p_regs,
-           p_regs[REG_IDX_EAX],
-           p_regs[REG_IDX_ECX],
-           p_regs[REG_IDX_EDX],
-           p_regs[REG_IDX_EBX],
-           p_regs[REG_IDX_ESI],
-           p_regs[REG_IDX_EDI]
-        );
-    
+           "ebp: %x "
+           "eip: %x\n"
+           "cs: %x "
+           "eflags: %x\n"
+           ,
+           __func__, p_regs, p_regs[REGIDX_EAX], p_regs[REGIDX_ECX], p_regs[REGIDX_EDX],
+           p_regs[REGIDX_EBX], p_regs[REGIDX_ESI], p_regs[REGIDX_EDI], p_regs[REGIDX_EBP],
+           p_regs[REGIDX_EIP], p_regs[REGIDX_CS], p_regs[REGIDX_EFLAGS]);
 }
 
 /**
  */
-void irq_handler(const uint32_t* p_regs)
-{
-  printf("%s : %p\n", __func__, p_regs);
-}
+void irq_handler(const uint32_t *p_regs) { printf("%s : %p\n", __func__, p_regs); }
