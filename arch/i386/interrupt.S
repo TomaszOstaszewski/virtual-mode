@@ -1,8 +1,8 @@
 ; This macro creates a stub for an ISR which does not
 ; pass any error code.
 %macro ISR_NOERRCODE 1
+global isr__%1
 isr__%1:
-    cli
     push byte 0
     push byte %1
     jmp isr_common_stub
@@ -12,18 +12,16 @@ isr__%1:
 ; error code.
 %macro ISR_ERRCODE 1
 isr__%1:
-    cli                         ; Disable interrupts.
     push byte %1                ; Push the interrupt number
     jmp isr_common_stub
 %endmacro
 
 ; This macro creates a stub for an IRQ - the first parameter is
 ; the IRQ number, the second is the ISR number it is remapped to.
-%macro IRQ 2
+%macro IRQ 1
 irq__%1:
-    cli
     push byte 0
-    push byte %2
+    push byte %1
     jmp irq_common_stub
 %endmacro
 
@@ -125,27 +123,27 @@ ISR_NOERRCODE 29
 ISR_NOERRCODE 30
 ISR_NOERRCODE 31
 
-IRQ   0,    32
-IRQ   1,    33
-IRQ   2,    34
-IRQ   3,    35
-IRQ   4,    36
-IRQ   5,    37
-IRQ   6,    38
-IRQ   7,    39
-IRQ   8,    40
-IRQ   9,    41
-IRQ  10,    42
-IRQ  11,    43
-IRQ  12,    44
-IRQ  13,    45
-IRQ  14,    46
-IRQ  15,    47
-
+IRQ   0
+IRQ   1
+IRQ   2
+IRQ   3
+IRQ   4
+IRQ   5
+IRQ   6
+IRQ   7
+IRQ   8
+IRQ   9
+IRQ  10
+IRQ  11
+IRQ  12
+IRQ  13
+IRQ  14
+IRQ  15
 
         
 ; In isr.c
 [EXTERN isr_handler]
+extern isr_handler_2
 [EXTERN irq_handler]
 
 ; This is our common ISR stub. It saves the processor state, sets
@@ -163,8 +161,11 @@ isr_common_stub:
     mov fs, ax
     mov gs, ax
 
+    mov eax, esp
+    add eax, 4
+    push eax
     call isr_handler
-
+    pop ebx
     pop ebx        ; reload the original data segment descriptor
     mov ds, bx
     mov es, bx
@@ -173,7 +174,6 @@ isr_common_stub:
 
     popa                     ; Pops edi,esi,ebp...
     add esp, 8     ; Cleans up the pushed error code and pushed ISR number
-    sti
     iret           ; pops 5 things at once: CS, EIP, EFLAGS, SS, and ESP
 
 
@@ -192,6 +192,7 @@ irq_common_stub:
    mov fs, ax
    mov gs, ax
 
+    
    call irq_handler
 
    pop ebx        ; reload the original data segment descriptor
@@ -202,7 +203,6 @@ irq_common_stub:
 
    popa                     ; Pops edi,esi,ebp...
    add esp, 8     ; Cleans up the pushed error code and pushed ISR number
-   sti
    iret           ; pops 5 things at once: CS, EIP, EFLAGS, SS, and ESP 
 
 global get_irq_table

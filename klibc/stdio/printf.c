@@ -6,6 +6,12 @@
 #include <string.h>
 #include "monitor.h"
 
+typedef union fargs_u {
+  int x_;
+  char c_;
+  const char* s_;
+} fargs_u;
+
 static void print(const char *data, size_t data_length) {
     size_t idx = 0;
     for (idx = 0; idx < data_length; idx++) {
@@ -20,6 +26,7 @@ int  printf(const char* format, ...) {
     int written = 0;
     size_t amount;
     bool rejected_bad_specifier = false;
+    fargs_u fu;
 
     while (*format != '\0') {
         if (*format != '%') {
@@ -46,24 +53,25 @@ int  printf(const char* format, ...) {
         }
         switch (*format) {
         case 'c':
-          {
             format++;
-            char c = (char)va_arg(parameters, int /* char promotes to int */);
-            print(&c, sizeof(c));
-          } break;
+            fu.c_ = (char)va_arg(parameters, int /* char promotes to int */);
+            print(&fu.c_, sizeof(fu.c_));
+           break;
         case 's':
-          {
             format++;
-            const char *s = va_arg(parameters, const char *);
-            print(s, strlen(s));
-          }
+            fu.s_ = va_arg(parameters, const char *);
+            print(fu.s_, strlen(fu.s_));
           break;
-        case 'x':
-          {
+        case 'u':
+        case 'p':
             format++;
-            int x = (int)va_arg(parameters, int);
-            monitor_write_hex(x);
-          }
+            fu.x_ = (int)va_arg(parameters, int);
+            monitor_write_dec(fu.x_);
+            break;
+        case 'x':
+            format++;
+            fu.x_ = (int)va_arg(parameters, int);
+            monitor_write_hex(fu.x_);
           break;
         default:
           goto incomprehensible_conversion;

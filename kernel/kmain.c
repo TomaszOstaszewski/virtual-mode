@@ -20,7 +20,6 @@ void parse_cr3(uint32_t cr3) { printf("Page dir at %x\n", cr3); }
 
 int kernel_main(void) {
     printf("%s : Hello, world!\n", __func__);
-    //    init_idt();
     printf("Interrupts: %s\n", are_interrupts_enabled() ? "enabled" : "disabled");
     parse_cr3(read_cr3());
     parse_cr0(read_cr0());
