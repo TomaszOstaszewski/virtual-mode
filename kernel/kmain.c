@@ -25,7 +25,8 @@ int kernel_main(void) {
     parse_cr3(read_cr3());
     parse_cr0(read_cr0());
     init_gdt();
+    init_idt();
     turn_on_paging();
-    //    init_idt();
+
     return 0;
 }

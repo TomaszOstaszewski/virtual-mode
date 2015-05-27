@@ -1,3 +1,6 @@
+/**
+ * @file isr.c
+ */
 #include "compiler_macros.h"
 #include "isr.h"
 #include "stdio.h"
@@ -19,7 +22,7 @@ typedef enum e_regs_indexes {
 } e_regs_indexes;
 
 void isr_handler(const uint32_t *p_regs) {
-    printf("%s : %p\n"
+    printf("%s: %x\n"
            "eax: %x "
            "ecx: %x\n"
            "edx: %x "
@@ -29,14 +32,18 @@ void isr_handler(const uint32_t *p_regs) {
            "ebp: %x "
            "eip: %x\n"
            "cs: %x "
-           "eflags: %x\n"
-           ,
-           __func__, p_regs, p_regs[REGIDX_EAX], p_regs[REGIDX_ECX], p_regs[REGIDX_EDX],
-           p_regs[REGIDX_EBX], p_regs[REGIDX_ESI], p_regs[REGIDX_EDI], p_regs[REGIDX_EBP],
-           p_regs[REGIDX_EIP], p_regs[REGIDX_CS], p_regs[REGIDX_EFLAGS]);
-    for (;;) {
+           "eflags: %x\n",
+           __func__, p_regs[REGIDX_ISRNUM], p_regs[REGIDX_EAX], p_regs[REGIDX_ECX],
+           p_regs[REGIDX_EDX], p_regs[REGIDX_EBX], p_regs[REGIDX_ESI], p_regs[REGIDX_EDI],
+           p_regs[REGIDX_EBP], p_regs[REGIDX_EIP], p_regs[REGIDX_CS], p_regs[REGIDX_EFLAGS]);
+    switch (p_regs[REGIDX_ISRNUM]) {
+    case 14: /* Can't handle a page fault yet, so halt. */
+        asm volatile("hlt");
+        for (;;) ;
+        break;
+    default:
+        break;
     }
-
 }
 
 /**
