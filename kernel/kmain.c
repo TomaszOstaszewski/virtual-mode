@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include "descriptor-tables.h"
 #include "intrisics.h"
+#include "paging.h"
 
 struct multiboot;
 
@@ -20,10 +21,11 @@ void parse_cr3(uint32_t cr3) { printf("Page dir at %x\n", cr3); }
 
 int kernel_main(void) {
     printf("%s : Hello, world!\n", __func__);
-    printf("Interrupts: %s\n", are_interrupts_enabled() ? "enabled" : "disabled");
+    //    printf("Interrupts: %s\n", are_interrupts_enabled() ? "enabled" : "disabled");
     parse_cr3(read_cr3());
     parse_cr0(read_cr0());
     init_gdt();
-    init_idt();
+    turn_on_paging();
+    //    init_idt();
     return 0;
 }

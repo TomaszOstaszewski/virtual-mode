@@ -34,6 +34,9 @@ void isr_handler(const uint32_t *p_regs) {
            __func__, p_regs, p_regs[REGIDX_EAX], p_regs[REGIDX_ECX], p_regs[REGIDX_EDX],
            p_regs[REGIDX_EBX], p_regs[REGIDX_ESI], p_regs[REGIDX_EDI], p_regs[REGIDX_EBP],
            p_regs[REGIDX_EIP], p_regs[REGIDX_CS], p_regs[REGIDX_EFLAGS]);
+    for (;;) {
+    }
+
 }
 
 /**

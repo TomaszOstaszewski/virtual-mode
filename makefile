@@ -20,7 +20,7 @@ NASM    :=nasm
 CFLAGS  :=-O1 -fno-schedule-insns -ggdb -m32 -Wall -Werror \
  -nostdlib -nostdinc -I$(shell $(CC) -print-file-name=include)  \
  -fno-omit-frame-pointer -ffreestanding -fno-stack-protector \
- -ffunction-sections -fdata-sections
+ -ffunction-sections -fdata-sections -fverbose-asm -save-temps=obj
 AFLAGS  :=
 LDFLAGS :=-Wl,-gc-sections
 DEPGEN_FLAGS =-MP -MMD \

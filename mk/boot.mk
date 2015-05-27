@@ -7,6 +7,7 @@ boot_FILES      :=\
  interrupt.S \
  isr.c \
  descriptor-tables.c \
+ paging.c \
 
 boot_INCLUDES:=\
  -I./klibc/include/
