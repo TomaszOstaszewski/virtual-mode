@@ -115,11 +115,4 @@ void turn_on_paging(void) {
                  : : "r"(cr0));
     //    p_table += 0xc0000000;
 #endif
-    uint8_t *p_table = (uint8_t *)&s_pde_entries[0];
-    p_table += 0xc0400000;
-    //    map_v_to_p((uint32_t)(p_table + 0xc0000000));
-    *p_table = 0x1;
-    //    p_table += 0x
-    //    map_v_to_p((uint32_t)(p_table + 0xc03fffff - 0x103000));
-    //    map_v_to_p((uint32_t)(p_table + 0xc03fffff - 0x103000 + 1));
 }

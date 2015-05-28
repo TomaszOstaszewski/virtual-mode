@@ -77,12 +77,12 @@
  * and this is how the code using CS, DS, and SS segments gets linked
  * with the GDT table.
  */
-static uint64_t gdt_table[5];
+uint64_t gdt_table[5];
 
 /**
  * @brief The Interrupt Descriptor Table (IDT)
  */
-static uint64_t idt_table[256];
+uint64_t idt_table[256];
 
 /**
  * @brief Creates a single descriptor entry.
