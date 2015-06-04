@@ -19,7 +19,7 @@ BUILD_ROOT      :=$(firstword $(subst -, ,$(shell $(CC) -dumpmachine)))/
 NASM    :=nasm
 CFLAGS  :=-O1 -fno-schedule-insns -ggdb -m32 -Wall -Werror \
  -nostdlib -nostdinc -I$(shell $(CC) -print-file-name=include)  \
- -fno-omit-frame-pointer -ffreestanding -fno-stack-protector \
+ -ffreestanding -fno-stack-protector \
  -ffunction-sections -fdata-sections -fverbose-asm -save-temps=obj
 AFLAGS  :=
 LDFLAGS :=-Wl,-gc-sections
