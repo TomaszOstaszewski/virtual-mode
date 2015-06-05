@@ -3,6 +3,7 @@
  */
 #include <stdint.h>
 #include "stdio.h"
+#include "monitor.h"
 
 uint32_t pde_4Mb_table[1024];
 
@@ -61,7 +62,8 @@ setup_4Mb_initial_paging(void) {
  */
 void higher_half_cont(void) {
     /* Invalidate page 0 */
-    asm volatile("invlpg 0");
+  asm volatile("invlpg (%0)" : : "r"(0) : "memory");
+  monitor_clear();
     printf("Hello, paged world!");
     /*********************************/
     /* Now you can set up a new GDT  */

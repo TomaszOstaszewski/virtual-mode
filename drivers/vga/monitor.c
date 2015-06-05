@@ -5,10 +5,11 @@
 #include "io-x86.h"
 
 // The VGA framebuffer starts at 0xB8000.
-uint16_t *video_memory = (uint16_t *)0xB8000;
+// Virtual address is offsetted with 0xc0000000
+static uint16_t * const video_memory = (uint16_t *)(0xB8000 + 0xc0000000);
 // Stores the cursor position.
-uint8_t cursor_x = 0;
-uint8_t cursor_y = 0;
+static uint8_t cursor_x = 0;
+static uint8_t cursor_y = 0;
 
 // Updates the hardware cursor.
 static void move_cursor() {
@@ -108,8 +109,15 @@ void monitor_clear() {
     uint16_t blank = 0x20 /* space */ | (attributeByte << 8);
 
     int i;
-    for (i = 0; i < 80 * 25; i++) {
+    for (i = 0; i < 80 * 25; i+=8) {
         video_memory[i] = blank;
+        video_memory[i+1] = blank;
+        video_memory[i+2] = blank;
+        video_memory[i+3] = blank;
+        video_memory[i+4] = blank;
+        video_memory[i+5] = blank;
+        video_memory[i+6] = blank;
+        video_memory[i+7] = blank;
     }
 
     // Move the hardware cursor back to the start.

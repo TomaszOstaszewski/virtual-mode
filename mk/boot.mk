@@ -11,6 +11,7 @@ boot_FILES      :=\
  paging-4Mb.c \
 
 boot_INCLUDES:=\
- -I./klibc/include/
+ -I./klibc/include/ \
+ -I./drivers/vga
 
 
