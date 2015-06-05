@@ -34,7 +34,7 @@ $$($(1)_OBJ_DIR)%.o: $$($(1)_DIR)%.c | $$$$(@D)/.
 
 $$($(1)_OBJ_DIR)%.o: $$($(1)_DIR)%.S | $$$$(@D)/.
 	@$(ECHO_NASM) $$@
-	$(NOECHO)$(NASM) -f elf32 -o $$(@) -l $$(@D)/$$(*).lst $$(<)
+	$(NOECHO)$(NASM) $$(NASMFLAGS) -o $$(@) -l $$(@D)/$$(*).lst $$(<)
 
 $$($(1)_OBJ_DIR)%.o: $$($(1)_DIR)%.s | $$$$(@D)/.
 	@$(ECHO_AS) $$@

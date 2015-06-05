@@ -21,8 +21,9 @@ CFLAGS  :=-O1 -fno-schedule-insns -ggdb -m32 -Wall -Werror \
  -nostdlib -nostdinc -I$(shell $(CC) -print-file-name=include)  \
  -ffreestanding -fno-stack-protector \
  -fno-omit-frame-pointer \
- -ffunction-sections -fdata-sections -fverbose-asm -save-temps=obj
+ -ffunction-sections -fdata-sections -fverbose-asm -save-temps
 AFLAGS  :=
+NASMFLAGS:=-felf
 LDFLAGS :=-Wl,-gc-sections
 DEPGEN_FLAGS =-MP -MMD \
  -MT '$(@D)/$(*).o $(@D)/$(*).d $(@D)/$(*).i $(@D)/$(*).S $(@D)/$(*).def dirs-$$(1) doxy-$$(1) $$(BUILD_ROOT)cscope.files bundle log'
